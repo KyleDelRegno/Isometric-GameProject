@@ -1,20 +1,39 @@
-[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://6k5fe6xbjv3k"]
+[gd_resource type="TileSet" load_steps=7 format=3 uid="uid://6k5fe6xbjv3k"]
 
 [ext_resource type="Texture2D" uid="uid://5iwg4yxhh813" path="res://Textures/tilesets/tileset.png" id="1_u8jq6"]
+[ext_resource type="Texture2D" uid="uid://b4wtb2ixushac" path="res://Textures/Cursor.png" id="2_eatjn"]
+[ext_resource type="Texture2D" uid="uid://d3n0qkujhv02g" path="res://Textures/floor_test.png" id="3_owcou"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_owcou"]
+resource_name = "Cursor"
+texture = ExtResource("2_eatjn")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 8)
+0:1/0 = 0
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_go701"]
 resource_name = "temp"
 texture = ExtResource("1_u8jq6")
 texture_region_size = Vector2i(32, 32)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, -8)
+0:0/0/texture_origin = Vector2i(0, 8)
 0:1/0 = 0
 1:0/0 = 0
-1:0/0/texture_origin = Vector2i(0, -8)
+1:0/0/texture_origin = Vector2i(0, 8)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_sihx6"]
+resource_name = "Floor"
+texture = ExtResource("3_owcou")
+texture_region_size = Vector2i(32, 16)
+0:0/0 = 0
+1:0/0 = 0
 
 [resource]
 tile_shape = 1
 tile_layout = 4
 tile_offset_axis = 1
 tile_size = Vector2i(32, 16)
-sources/0 = SubResource("TileSetAtlasSource_go701")
+sources/1 = SubResource("TileSetAtlasSource_go701")
+sources/0 = SubResource("TileSetAtlasSource_owcou")
+sources/3 = SubResource("TileSetAtlasSource_sihx6")
