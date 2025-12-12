@@ -15,6 +15,15 @@ func _input(event):
 			var block_pos = tilemap_script.BlockPosition()
 			if block_pos[0]!=null:
 				tilemap_script.BlockAdd(block_pos[0])
+		elif event.button_index == MOUSE_BUTTON_RIGHT and not event.is_pressed():
+			#Remove the block
+			var block_pos = tilemap_script.BlockPosition() #Gets block adjacents
+			if(block_pos[0]!=null):
+				var target_pos = tilemap_script.BlockLookingPosition(block_pos[0], block_pos[1])
+				if(target_pos!=null):
+					tilemap_script.BlockRemove(target_pos)
+
+
 	if event.is_action_released("rot_left"): #Rotate Left
 		print("Rotate Left")
 		tilemap_script.world_rot += 90

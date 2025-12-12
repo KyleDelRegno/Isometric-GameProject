@@ -30,7 +30,7 @@ func GenerateTileMapLayers():
 		tilemap_layers[z] = refmap
 
 func _process(_delta: float):
-	BlockFace() #Determines the Cursor
+	BlockCursor() #Determines the Cursor
 
 
 func point_in_triangle(p: Vector2, a: Vector2, b:Vector2, c:Vector2) -> bool:
@@ -50,7 +50,7 @@ func point_in_rotation(tile_pos : Vector3i, rot : float) -> Vector3i:
 
 	return Vector3i(newX,newY, tile_pos.z)
 
-func BlockPosition():
+func BlockPosition(): #Determings Block Face and New block position accordingly (BASED ON TILEMAP)
 	#Master Tilemap
 	var tile_position = tilemap_master.local_to_map(get_local_mouse_position())
 	var mouse_position = get_global_mouse_position()
@@ -90,17 +90,41 @@ func BlockPosition():
 			print("Error Placing Block")
 			return [null, "NULL"]
 
-func BlockAdd(block_pos: Vector3i):
+func BlockLookingPosition(block_pos: Vector3i, block_side : String): #Determines Block Looking At
+	#Determine Target Block Position
+	var target_pos : Vector3i 
+	if(block_side=="CENTER" && block_pos.z!=0):
+		target_pos = Vector3i(block_pos.x,block_pos.y,block_pos.z - 1)
+	elif(block_side=="RIGHT"):
+		target_pos = Vector3i(block_pos.x,block_pos.y - 1,block_pos.z)
+	elif(block_side=="LEFT"):
+		target_pos = Vector3i(block_pos.x + 1,block_pos.y,block_pos.z)
+	else: 
+		return null
+	return target_pos; #Block Looking At
+
+func BlockAdd(block_pos: Vector3i): #Adds block
 	#Setting the Tile Position
 	tilemap_layers[block_pos.z].set_cell(Vector2i(block_pos.x, block_pos.y), 1, Vector2i(0,0))
 	#Setting the Proper World Pos
 	var rads = deg_to_rad(-world_rot)
 	var rotated_block_pos = point_in_rotation(block_pos, rads)
 	world_data[rotated_block_pos] = "block"
-	print("block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(block_pos) + " | Rotation : " + str(world_rot))
+	print("✅✅✅ block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(block_pos) + " | Rotation : " + str(world_rot))
 	
+func BlockRemove(target_pos: Vector3i): #Removes Block
 
-func BlockFace():
+	#Target_pos is looking at block pos NOT ROTATED
+	var rads = deg_to_rad(-world_rot)
+	var rotated_block_pos = point_in_rotation(target_pos, rads)
+	#Removes the tile
+	tilemap_layers[target_pos.z].set_cell(Vector2i(target_pos.x, target_pos.y), -1)
+	world_data.erase(rotated_block_pos)
+	print("❌❌❌ block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(target_pos) + " | Rotation : " + str(world_rot))
+
+
+
+func BlockCursor():
 	#Variables
 	var data = BlockPosition()
 	var block_pos = data[0]
@@ -128,4 +152,4 @@ func WorldRotate():
 		var rads = deg_to_rad(world_rot)
 		var tile_rot = point_in_rotation(block_pos, rads)
 		tilemap_layers[block_pos.z].set_cell(Vector2i(tile_rot.x, tile_rot.y), 1, Vector2i(0,0))
-		print("block at : " + str(block_pos) + " | Rotated Pos : " + str(tile_rot) + " | Rotation : " + str(world_rot))
+		#print("block at : " + str(block_pos) + " | Rotated Pos : " + str(tile_rot) + " | Rotation : " + str(world_rot))
