@@ -9,7 +9,7 @@ var tileset = preload("res://Textures/tilesets/tileset.tres")
 @export var tilemap_layers = {}
 
 var world_data = {} #Vector3 [x,y,z]
-
+var world_rot = 0;
 
 func _ready():
 	GenerateTileMapLayers()
@@ -30,10 +30,7 @@ func GenerateTileMapLayers():
 		tilemap_layers[z] = refmap
 
 func _process(_delta: float):
-	BlockFace()
-
-
-
+	BlockFace() #Determines the Cursor
 
 
 func point_in_triangle(p: Vector2, a: Vector2, b:Vector2, c:Vector2) -> bool:
@@ -45,6 +42,14 @@ func point_in_triangle(p: Vector2, a: Vector2, b:Vector2, c:Vector2) -> bool:
 	
 	return w1 >= 0.0 and w2 >= 0.0 and (w1 + w2) <= 1.0
 
+func point_in_rotation(tile_pos : Vector3i, rot : float) -> Vector3i:
+
+	var newX = round((tile_pos.x*cos(rot)) - (tile_pos.y*sin(rot)))
+	var newY = round((tile_pos.x*sin(rot)) + (tile_pos.y*cos(rot)))
+
+
+	return Vector3i(newX,newY, tile_pos.z)
+
 func BlockPosition():
 	#Master Tilemap
 	var tile_position = tilemap_master.local_to_map(get_local_mouse_position())
@@ -55,19 +60,19 @@ func BlockPosition():
 	var CL : Vector2 = Vector2(16 + (tile_position.x * 16) + (tile_position.y * 16), 16 + (tile_position.y * 8) - (tile_position.x * 8)) #Checked
 	#Determine Which Side of Tileface
 	var side_triangle = point_in_triangle(mouse_position, AL, BL, CL) # True == Left : False == Right
-	$Label.text = str(side_triangle)
+	#$Label.text = str(side_triangle)
 	#Checks for which tilemap and Triangle being Determined
 	for z in range(max_height - 1, -1, -1):
 		#grab the base tilemap
 		var target_tilemap = tilemap_layers[z]
 		var target_pos = Vector2i(tile_position.x - z, tile_position.y + z)
 		#Do the Position Checks
-		if z == (max_height - 1) && target_tilemap.get_cell_source_id(target_pos)!=-1:
-			print("Max Height Limit")
-			return [null, "NULL"]
+		# if z == (max_height - 1) && target_tilemap.get_cell_source_id(target_pos)!=-1:
+		# 	print("Max Height Limit")
+		# 	return [null, "NULL"]
 		#elif z != (max_height - 1) && target_tilemap.get_cell_source_id(target_pos)!=-1: #Check tile Center
 		# 	return [Vector3i(target_pos.x, target_pos.y, z+1), "CENTER"]
-		elif target_tilemap.get_cell_source_id(Vector2i(target_pos.x - 1, target_pos.y + 1))!=-1:
+		if z != (max_height - 1) and target_tilemap.get_cell_source_id(Vector2i(target_pos.x - 1, target_pos.y + 1))!=-1:
 			return [Vector3i(target_pos.x - 1, target_pos.y + 1, z + 1), "CENTER"]
 		elif side_triangle && target_tilemap.get_cell_source_id(Vector2i(target_pos.x - 1, target_pos.y))!=-1: #Check Left
 			return [Vector3i(target_pos.x - 1, target_pos.y + 1, z), "RIGHT"]
@@ -86,10 +91,14 @@ func BlockPosition():
 			return [null, "NULL"]
 
 func BlockAdd(block_pos: Vector3i):
+	#Setting the Tile Position
 	tilemap_layers[block_pos.z].set_cell(Vector2i(block_pos.x, block_pos.y), 1, Vector2i(0,0))
-	world_data[block_pos] = "block"
-	print("block at : " + str(block_pos))
-
+	#Setting the Proper World Pos
+	var rads = deg_to_rad(-world_rot)
+	var rotated_block_pos = point_in_rotation(block_pos, rads)
+	world_data[rotated_block_pos] = "block"
+	print("block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(block_pos) + " | Rotation : " + str(world_rot))
+	
 
 func BlockFace():
 	#Variables
@@ -107,6 +116,16 @@ func BlockFace():
 	tilemap_master.set_cell(Vector2i(tile_pos), 0, Vector2i(0,0))
 
 	#Testing
-	#$Label.text = block_side
+	$Label.text = block_side
 	$Label2.text = str(block_pos)
-	$Label3.text = str(get_global_mouse_position())
+	$Label3.text = str(world_rot)
+
+func WorldRotate():
+	
+	for z in tilemap_layers: #clears all the tilemaps
+		tilemap_layers[z].clear()
+	for block_pos in world_data:
+		var rads = deg_to_rad(world_rot)
+		var tile_rot = point_in_rotation(block_pos, rads)
+		tilemap_layers[block_pos.z].set_cell(Vector2i(tile_rot.x, tile_rot.y), 1, Vector2i(0,0))
+		print("block at : " + str(block_pos) + " | Rotated Pos : " + str(tile_rot) + " | Rotation : " + str(world_rot))
