@@ -1,8 +1,14 @@
 extends Node2D
 
 var max_height = 5
-var tile_width = 32
-var tile_height = 16
+@export var tile_width = 32
+@export var tile_height = 16
+@onready var HALF_H = tile_height / 2
+@onready var HALF_W = tile_width / 2
+@export var tile_center = Vector2i(0,0)
+
+
+
 
 var tileset = preload("res://Textures/tilesets/tileset.tres")
 @export var tilemap_master : TileMapLayer
@@ -10,6 +16,12 @@ var tileset = preload("res://Textures/tilesets/tileset.tres")
 
 var world_data = {} #Vector3 [x,y,z]
 var world_rot = 0;
+class Block:
+	var type
+	var id
+	func _init(_type :="", _id:= 0): 
+		type = _type
+		id = _id
 
 func _ready():
 	GenerateTileMapLayers()
@@ -43,21 +55,22 @@ func point_in_triangle(p: Vector2, a: Vector2, b:Vector2, c:Vector2) -> bool:
 	return w1 >= 0.0 and w2 >= 0.0 and (w1 + w2) <= 1.0
 
 func point_in_rotation(tile_pos : Vector3i, rot : float) -> Vector3i:
+	var relative_pos = Vector2(tile_pos.x - tile_center.x, tile_pos.y - tile_center.y)
 
-	var newX = round((tile_pos.x*cos(rot)) - (tile_pos.y*sin(rot)))
-	var newY = round((tile_pos.x*sin(rot)) + (tile_pos.y*cos(rot)))
+	var newX = round((relative_pos.x*cos(rot)) - (relative_pos.y*sin(rot)))
+	var newY = round((relative_pos.x*sin(rot)) + (relative_pos.y*cos(rot)))
 
-
-	return Vector3i(newX,newY, tile_pos.z)
+	
+	return Vector3i(newX + tile_center.x,newY + tile_center.y, tile_pos.z)
 
 func BlockPosition(): #Determings Block Face and New block position accordingly (BASED ON TILEMAP)
 	#Master Tilemap
 	var tile_position = tilemap_master.local_to_map(get_local_mouse_position())
 	var mouse_position = get_global_mouse_position()
 	#Triangle Positions Left
-	var AL : Vector2 = Vector2((tile_position.x * 16) + (tile_position.y * 16), 8 + (tile_position.y * 8) - (tile_position.x * 8)) #Checked
-	var BL : Vector2 = Vector2(16 + (tile_position.x * 16) + (tile_position.y * 16), (tile_position.y * 8) - (tile_position.x * 8)) #Checked
-	var CL : Vector2 = Vector2(16 + (tile_position.x * 16) + (tile_position.y * 16), 16 + (tile_position.y * 8) - (tile_position.x * 8)) #Checked
+	var AL : Vector2 = Vector2((tile_position.x * HALF_W) + (tile_position.y * HALF_W), HALF_H + (tile_position.y * HALF_H) - (tile_position.x * HALF_H)) #Checked
+	var BL : Vector2 = Vector2(HALF_W + (tile_position.x * HALF_W) + (tile_position.y * HALF_W), (tile_position.y * HALF_H) - (tile_position.x * HALF_H)) #Checked
+	var CL : Vector2 = Vector2(HALF_W + (tile_position.x * HALF_W) + (tile_position.y * HALF_W), HALF_W + (tile_position.y * HALF_H) - (tile_position.x * HALF_H)) #Checked
 	#Determine Which Side of Tileface
 	var side_triangle = point_in_triangle(mouse_position, AL, BL, CL) # True == Left : False == Right
 	#$Label.text = str(side_triangle)
@@ -109,7 +122,7 @@ func BlockAdd(block_pos: Vector3i): #Adds block
 	#Setting the Proper World Pos
 	var rads = deg_to_rad(-world_rot)
 	var rotated_block_pos = point_in_rotation(block_pos, rads)
-	world_data[rotated_block_pos] = "block"
+	world_data[rotated_block_pos] = Block.new("block", 1)
 	print("✅✅✅ block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(block_pos) + " | Rotation : " + str(world_rot))
 	
 func BlockRemove(target_pos: Vector3i): #Removes Block
@@ -129,6 +142,7 @@ func BlockCursor():
 	var data = BlockPosition()
 	var block_pos = data[0]
 	var block_side = data[1]
+	var looking_pos = BlockLookingPosition(data[0], data[1])
 	#Exceptions
 	if block_pos==null: return
 	if block_pos.z==0 && block_side=="CENTER": pass
@@ -140,9 +154,14 @@ func BlockCursor():
 	tilemap_master.set_cell(Vector2i(tile_pos), 0, Vector2i(0,0))
 
 	#Testing
-	$Label.text = block_side
-	$Label2.text = str(block_pos)
-	$Label3.text = str(world_rot)
+	#$Label.text = block_side
+	#$Label2.text = str(block_pos)
+	#$Label3.text = str(world_rot)
+	$UI/Label.text = "Cursor Position : " + str(block_pos)
+	$UI/Label2.text = "Looking Position : " + str(looking_pos)
+	$UI/Label4.text = "Block Side : " + str(block_side)
+	$UI/Label3.text = "World Rotation : " + str(world_rot)
+
 
 func WorldRotate():
 	
