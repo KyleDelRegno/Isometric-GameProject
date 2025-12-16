@@ -14,7 +14,7 @@ func _input(event):
 			#Place the block 
 			var block_pos = tilemap_script.BlockPosition()
 			if block_pos[0]!=null:
-				tilemap_script.BlockAdd(block_pos[0])
+				tilemap_script.BlockAdd(block_pos[0], 5)
 		elif event.button_index == MOUSE_BUTTON_RIGHT and not event.is_pressed():
 			#Remove the block
 			var block_pos = tilemap_script.BlockPosition() #Gets block adjacents

@@ -1,10 +1,13 @@
 extends Node2D
 
+@export var resource_json : JSON
+var resource_pack : Dictionary = {}
+
 var max_height = 5
-@export var tile_width = 32
-@export var tile_height = 16
-@onready var HALF_H = tile_height / 2
-@onready var HALF_W = tile_width / 2
+var tile_width : int
+var tile_height : int
+@onready var HALF_H : int
+@onready var HALF_W : int
 @export var tile_center = Vector2i(0,0)
 
 
@@ -19,11 +22,25 @@ var world_rot = 0;
 class Block:
 	var type
 	var id
-	func _init(_type :="", _id:= 0): 
+	var connects
+	var neighbors #holds number based on NSEW  -> N = 1 E = 2 S = 4 W = 8
+	func _init( _id:= 0, _type :="", _connects := false, _neighbors := 0): 
 		type = _type
 		id = _id
+		connects = _connects
+		if connects:
+			neighbors = _neighbors
 
+#Everything On Game Load
 func _ready():
+	#Setting up resource pack
+	resource_pack = resource_json.data
+	#setting tile dimensions
+	tile_width = resource_pack["data"].tile_width
+	tile_height = resource_pack["data"].tile_height
+	HALF_H = tile_height / 2
+	HALF_W = tile_width / 2
+
 	GenerateTileMapLayers()
 
 func GenerateTileMapLayers():
@@ -116,26 +133,97 @@ func BlockLookingPosition(block_pos: Vector3i, block_side : String): #Determines
 		return null
 	return target_pos; #Block Looking At
 
-func BlockAdd(block_pos: Vector3i): #Adds block
+func BlockAdd(block_pos: Vector3i, block_id : int): #Adds block
+
+	#Getting the Block Data
+	var block = Block.new(block_id, resource_pack[str(block_id)].type, resource_pack[str(block_id)].connects)
 	#Setting the Tile Position
-	tilemap_layers[block_pos.z].set_cell(Vector2i(block_pos.x, block_pos.y), 1, Vector2i(0,0))
+	tilemap_layers[block_pos.z].set_cell(Vector2i(block_pos.x, block_pos.y), block_id, Vector2i(0,0))
 	#Setting the Proper World Pos
 	var rads = deg_to_rad(-world_rot)
 	var rotated_block_pos = point_in_rotation(block_pos, rads)
-	world_data[rotated_block_pos] = Block.new("block", 1)
+	#setting the world data
+	world_data[rotated_block_pos] = block
+	#Checking connecting based on world pos
+	if block.connects:
+		world_data[rotated_block_pos].neighbors = BlockConnect(rotated_block_pos, true)
+		BlockUpdate(rotated_block_pos) #input non rotated ( rotated here is the actual position)
 	print("✅✅✅ block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(block_pos) + " | Rotation : " + str(world_rot))
+
+func BlockUpdate(block_pos: Vector3i):
+	#Adjust for rotation
+	var rads = deg_to_rad(world_rot)
+	var rotated_block_pos = point_in_rotation(block_pos, rads)
+	#Grabbing the block Data
+	var data = world_data[block_pos] 
+	var atlas = Vector2i(0,0)
+	if data.connects:
+		atlas = Vector2i(data.neighbors, 0)
+	print("Updated Position : " + str(rotated_block_pos))
+	tilemap_layers[block_pos.z].set_cell(Vector2i(rotated_block_pos.x, rotated_block_pos.y), data.id, atlas)
 	
 func BlockRemove(target_pos: Vector3i): #Removes Block
-
 	#Target_pos is looking at block pos NOT ROTATED
 	var rads = deg_to_rad(-world_rot)
 	var rotated_block_pos = point_in_rotation(target_pos, rads)
+	#Checks Connecting
+	if world_data[rotated_block_pos].connects: 
+		BlockConnect(rotated_block_pos, false)
 	#Removes the tile
 	tilemap_layers[target_pos.z].set_cell(Vector2i(target_pos.x, target_pos.y), -1)
 	world_data.erase(rotated_block_pos)
 	print("❌❌❌ block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(target_pos) + " | Rotation : " + str(world_rot))
 
-
+func BlockConnect(block_pos : Vector3i, add_block : bool):
+	#inputed position is PROPERLY ROTATED
+	var neighbors : int = 0
+	#Checking the neighbors
+	var north_pos = Vector3i(block_pos.x, block_pos.y - 1, block_pos.z)
+	#Check North
+	if(world_data.has(north_pos)):
+		#Add Block
+		if world_data[north_pos].connects and add_block:
+			neighbors += 1
+			world_data[north_pos].neighbors += 4
+		#Remove Block
+		elif world_data[north_pos].connects and !add_block:
+			world_data[north_pos].neighbors -= 4
+		BlockUpdate(north_pos)
+	var east_pos = Vector3i(block_pos.x + 1, block_pos.y, block_pos.z)
+	#Check East
+	if(world_data.has(east_pos)):
+		#Add Block
+		if world_data[east_pos].connects and add_block:
+			neighbors += 2
+			world_data[east_pos].neighbors += 8
+		#Remove Block
+		elif world_data[east_pos].connects and !add_block:
+			world_data[east_pos].neighbors -= 8
+		BlockUpdate(east_pos)
+	var south_pos = Vector3i(block_pos.x, block_pos.y + 1, block_pos.z)
+	#Check South
+	if(world_data.has(south_pos)): 
+		#Add Block
+		if world_data[south_pos].connects and add_block:
+			neighbors += 4
+			world_data[south_pos].neighbors += 1
+		#Remove Block
+		if world_data[south_pos].connects and !add_block:
+			world_data[south_pos].neighbors -= 1
+		BlockUpdate(south_pos)
+	var west_pos = Vector3i(block_pos.x - 1, block_pos.y, block_pos.z)
+	#Check West
+	if(world_data.has(west_pos)):
+		#Add block
+		if world_data[west_pos].connects and add_block:
+			neighbors += 8
+			world_data[west_pos].neighbors += 2
+		#Remove Block
+		if world_data[west_pos].connects and !add_block:
+			world_data[west_pos].neighbors -= 2
+		BlockUpdate(west_pos)
+			
+	return neighbors
 
 func BlockCursor():
 	#Variables
@@ -170,5 +258,5 @@ func WorldRotate():
 	for block_pos in world_data:
 		var rads = deg_to_rad(world_rot)
 		var tile_rot = point_in_rotation(block_pos, rads)
-		tilemap_layers[block_pos.z].set_cell(Vector2i(tile_rot.x, tile_rot.y), 1, Vector2i(0,0))
+		tilemap_layers[block_pos.z].set_cell(Vector2i(tile_rot.x, tile_rot.y), 5, Vector2i(0,0))
 		#print("block at : " + str(block_pos) + " | Rotated Pos : " + str(tile_rot) + " | Rotation : " + str(world_rot))
