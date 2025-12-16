@@ -151,14 +151,35 @@ func BlockAdd(block_pos: Vector3i, block_id : int): #Adds block
 	print("✅✅✅ block at : " + str(rotated_block_pos) + " | Rotated Pos : " + str(block_pos) + " | Rotation : " + str(world_rot))
 
 func BlockUpdate(block_pos: Vector3i):
-	#Adjust for rotation
+	#block pos is ACTUAL BLOCK POS
+
+	#adjust for rotation
 	var rads = deg_to_rad(world_rot)
 	var rotated_block_pos = point_in_rotation(block_pos, rads)
 	#Grabbing the block Data
 	var data = world_data[block_pos] 
 	var atlas = Vector2i(0,0)
-	if data.connects:
-		atlas = Vector2i(data.neighbors, 0)
+	#gonna have to determinee new connect atlas
+	if data.connects: 
+		#rotation amount
+		var steps = round(world_rot / 90)
+		steps = (steps % 4 + 4) % 4 #normalize between 0 & 3
+		#Rotate until new mask
+		var mask = data.neighbors
+		for i in steps:
+			var n_bit = mask & 1     # 0001
+			var e_bit = mask & 2     # 0010
+			var s_bit = mask & 4     # 0100
+			var w_bit = mask & 8     # 1000
+
+			# Clockwise: newN = oldW, newE = oldN, newS = oldE, newW = oldS
+			mask = 0
+			if w_bit: mask |= 1      # new N
+			if n_bit: mask |= 2      # new E
+			if e_bit: mask |= 4      # new S
+			if s_bit: mask |= 8      # new W
+		#Sets atlas based on new mask
+		atlas = Vector2i(mask, 0)
 	print("Updated Position : " + str(rotated_block_pos))
 	tilemap_layers[block_pos.z].set_cell(Vector2i(rotated_block_pos.x, rotated_block_pos.y), data.id, atlas)
 	
@@ -256,7 +277,8 @@ func WorldRotate():
 	for z in tilemap_layers: #clears all the tilemaps
 		tilemap_layers[z].clear()
 	for block_pos in world_data:
-		var rads = deg_to_rad(world_rot)
-		var tile_rot = point_in_rotation(block_pos, rads)
-		tilemap_layers[block_pos.z].set_cell(Vector2i(tile_rot.x, tile_rot.y), 5, Vector2i(0,0))
+		# var rads = deg_to_rad(world_rot)
+		# var tile_rot = point_in_rotation(block_pos, rads)
+		# tilemap_layers[block_pos.z].set_cell(Vector2i(tile_rot.x, tile_rot.y), 5, Vector2i(0,0))
+		BlockUpdate(block_pos)
 		#print("block at : " + str(block_pos) + " | Rotated Pos : " + str(tile_rot) + " | Rotation : " + str(world_rot))

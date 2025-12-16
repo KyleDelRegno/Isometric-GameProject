@@ -27,10 +27,12 @@ func _input(event):
 	if event.is_action_released("rot_left"): #Rotate Left
 		print("Rotate Left")
 		tilemap_script.world_rot += 90
+		if tilemap_script.world_rot > 360: tilemap_script.world_rot -= 360 #keeps number small below 360
 		tilemap_script.WorldRotate()
 
 	elif event.is_action_released("rot_right"): #Rotate Right
 		print("Rotate Right")
 		tilemap_script.world_rot -= 90
+		if tilemap_script.world_rot < -360: tilemap_script.world_rot += 360 #Keeps number above -360
 		tilemap_script.WorldRotate()
 		
