@@ -14,7 +14,6 @@ script = ExtResource("1_gl6un")
 tilemap_master = NodePath("MasterTileMapLayer")
 
 [node name="MasterTileMapLayer" type="TileMapLayer" parent="World/Tilemaps"]
-visible = false
 z_index = 100
 y_sort_enabled = true
 tile_set = ExtResource("2_j5yw3")
